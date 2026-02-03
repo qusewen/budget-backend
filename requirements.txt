@@ -1,0 +1,4 @@
+asyncpg
+fastapi
+python-jose
+python-dotenv

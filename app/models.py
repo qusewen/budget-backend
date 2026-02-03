@@ -10,6 +10,7 @@ class User(BaseModel):
     password: str
     is_adult: bool = False
 
+
 class Login(BaseModel):
     name: str = Field(...)
     password: str = Field(...)

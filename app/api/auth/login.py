@@ -1,20 +1,24 @@
+import asyncpg
 from fastapi import APIRouter, Depends, Response
 
 from app.database.database import get_db_connection
-
-from app.Models.auth.auth_models import LoginResponse, Login, UserCreate
-
-import asyncpg
-
-from app.helpers.auth.hashed_password import hash_password, verify_password
-from app.helpers.auth.token import create_refresh_token, create_access_token
+from app.helpers.auth.hashed_password import verify_password
+from app.helpers.auth.token import create_access_token, create_refresh_token
+from app.Models.auth.auth_models import Login, LoginResponse, UserCreate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-@router.post("/login", response_model=LoginResponse, status_code = 201)
-async def login(credential: Login, response: Response, db: asyncpg.Connection = Depends(get_db_connection)):
 
-    user: UserCreate = await db.fetchrow('SELECT * FROM users WHERE email = $1', credential.email)
+@router.post("/login", response_model=LoginResponse, status_code=201)
+async def login(
+    credential: Login,
+    response: Response,
+    db: asyncpg.Connection = Depends(get_db_connection),
+):
+
+    user: UserCreate = await db.fetchrow(
+        "SELECT * FROM users WHERE email = $1", credential.email
+    )
     user_dict = dict(user)
     if user is not None:
         if verify_password(credential.password, user_dict["password"]):
@@ -30,7 +34,7 @@ async def login(credential: Login, response: Response, db: asyncpg.Connection = 
                 expires=30 * 24 * 60 * 60,
                 samesite="lax",
                 secure=True,
-                path='/'
+                path="/",
             )
 
             response.set_cookie(
@@ -41,9 +45,13 @@ async def login(credential: Login, response: Response, db: asyncpg.Connection = 
                 expires=30 * 24 * 60 * 60,
                 samesite="lax",
                 secure=True,
-                path='/'
+                path="/",
             )
-            return {"message": "Авторизация прошла успешно", "refresh_token": refresh_token, "access_token": access_token}
+            return {
+                "message": "Авторизация прошла успешно",
+                "refresh_token": refresh_token,
+                "access_token": access_token,
+            }
         else:
             return {"message": "Не верный логин или пароль"}
     else:
@@ -52,7 +60,6 @@ async def login(credential: Login, response: Response, db: asyncpg.Connection = 
 
 @router.post("/logout")
 async def logout(response: Response):
-     response.delete_cookie("refresh_token")
-     response.delete_cookie("access_token")
-     return {"message": 'Пользователь разлогинен'}
-
+    response.delete_cookie("refresh_token")
+    response.delete_cookie("access_token")
+    return {"message": "Пользователь разлогинен"}
