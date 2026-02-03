@@ -34,7 +34,7 @@ async def login(
                 expires=30 * 24 * 60 * 60,
                 samesite="lax",
                 secure=True,
-                path="/",
+                path="/refresh_access_token",
             )
 
             response.set_cookie(
