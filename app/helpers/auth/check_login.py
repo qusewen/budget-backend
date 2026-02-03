@@ -3,6 +3,7 @@ from fastapi import Depends, HTTPException, Request, Response, status
 from starlette.responses import JSONResponse
 
 from app.database.database import get_db_connection
+from app.helpers.auth.remove_cookie import remove_cookie
 from app.helpers.auth.token import decode_access_token
 
 
@@ -17,8 +18,7 @@ async def get_current_user(
 
     decoded_access_token = decode_access_token(access_token)
     if decoded_access_token is None:
-        response.delete_cookie("access_token", path="/")
-        response.delete_cookie("refresh_token", path="/")
+        await remove_cookie(response)
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": "Unauthorized"}
         )

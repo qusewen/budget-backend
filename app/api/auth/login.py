@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Response
 
 from app.database.database import get_db_connection
 from app.helpers.auth.hashed_password import verify_password
+from app.helpers.auth.set_cookie import set_cookie
 from app.helpers.auth.token import create_access_token, create_refresh_token
 from app.Models.auth.auth_models import Login, LoginResponse, UserCreate
 
@@ -26,27 +27,7 @@ async def login(
 
             refresh_token = create_refresh_token(user_dict)
             access_token = create_access_token(user_dict)
-            response.set_cookie(
-                key="refresh_token",
-                value=refresh_token,
-                httponly=True,
-                max_age=30 * 24 * 60 * 60,
-                expires=30 * 24 * 60 * 60,
-                samesite="lax",
-                secure=True,
-                path="/refresh_access_token",
-            )
-
-            response.set_cookie(
-                key="access_token",
-                value=access_token,
-                httponly=True,
-                max_age=30 * 24 * 60 * 60,
-                expires=30 * 24 * 60 * 60,
-                samesite="lax",
-                secure=True,
-                path="/",
-            )
+            await set_cookie(response, access_token, refresh_token)
             return {
                 "message": "Авторизация прошла успешно",
                 "refresh_token": refresh_token,

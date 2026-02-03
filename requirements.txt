@@ -1,3 +1,5 @@
+bcrypt
+starlette
 asyncpg
 fastapi
 python-jose
