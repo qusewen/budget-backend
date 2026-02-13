@@ -1,3 +1,4 @@
+import uvicorn
 from fastapi import Depends, FastAPI, Response
 
 from app.api.auth.login import router as login_router
@@ -10,10 +11,9 @@ app = FastAPI()
 
 app.include_router(router)
 app.include_router(login_router)
-app.include_router(login_router)
 app.include_router(login_router_auth)
 
 
-@app.get("/test")
-async def get_test(response: Response, current_user=Depends(get_current_user)):
-    return {"message": "login success"}
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

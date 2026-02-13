@@ -14,13 +14,14 @@ async def get_current_user(
 ):
     access_token = request.cookies.get("access_token")
     if not access_token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail= "Нет активных пользователей, авторизируйтесь в приложении")
 
     decoded_access_token = decode_access_token(access_token)
     if decoded_access_token is None:
         await remove_cookie(response)
         return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": "Unauthorized"}
+            status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": "Пользователь не в системе"}
+
         )
 
     select_user = await db.fetchrow(
@@ -28,6 +29,6 @@ async def get_current_user(
     )
 
     if not select_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail= "Нет активных пользователей, авторизируйтесь в приложении")
 
     return select_user

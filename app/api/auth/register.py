@@ -10,10 +10,10 @@ from app.helpers.auth.remove_cookie import remove_cookie
 from app.helpers.auth.set_cookie import set_cookie
 from app.helpers.auth.token import decode_access_token, create_access_token, create_refresh_token
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["Регистрация 🪪"])
 
 
-@router.post("/register", response_model=RegisterResponse, status_code=201)
+@router.post("/register", response_model=RegisterResponse, status_code=201, summary="регистрация нового пользователя 🤵‍♂️🤵‍♀️")
 async def register(
     user: UserCreate, db: asyncpg.Connection = Depends(get_db_connection)
 ):
@@ -36,7 +36,7 @@ async def register(
     return {"message": "Пользователь создан!", "user": user_dict}
 
 
-@router.post("/reset-password", response_model=ResetResponse, status_code=201)
+@router.post("/reset-password", response_model=ResetResponse, status_code=201, summary="Сброс пароля ✏️")
 async def reset_password(
     pas: ResetPasswordResponse, db: asyncpg.Connection = Depends(get_db_connection)
 ):
@@ -59,7 +59,7 @@ async def reset_password(
         else:
             return {"message": "Старый пароль невереный"}
 
-@router.post('/refresh_access_token', response_model=LoginResponse, status_code=201)
+@router.post('/refresh_access_token', response_model=LoginResponse, status_code=201, summary="Обновление refresh токена 🕗", description="Энд поинт по которому можно обновить токен")
 async def refresh_access_token(request: Request, response: Response):
     refresh_token = request.cookies.get('refresh_token')
     decode_refresh = decode_access_token(refresh_token)

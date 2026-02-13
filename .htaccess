@@ -1,0 +1,10 @@
+# Disable directory listing
+Options -Indexes
+# Enable rewrite engine
+RewriteEngine On
+# If file or directory exists, serve it directly
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+# Otherwise, redirect everything to index.html (SPA fallback)
+RewriteRule ^ index.html [L]

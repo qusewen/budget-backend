@@ -1,5 +1,5 @@
 import asyncpg
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Response, Request, HTTPException
 
 from app.database.database import get_db_connection
 from app.helpers.auth.hashed_password import verify_password
@@ -7,10 +7,10 @@ from app.helpers.auth.set_cookie import set_cookie
 from app.helpers.auth.token import create_access_token, create_refresh_token
 from app.Models.auth.auth_models import Login, LoginResponse, UserCreate
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["Авторизация 🔓"])
 
 
-@router.post("/login", response_model=LoginResponse, status_code=201)
+@router.post("/login", response_model=LoginResponse, status_code=201, summary="Логин 🔑")
 async def login(
     credential: Login,
     response: Response,
@@ -39,8 +39,14 @@ async def login(
         return {"message": "Пользователь не найден"}
 
 
-@router.post("/logout")
-async def logout(response: Response):
+@router.post("/logout", summary="Разлогин 🔐")
+async def logout(response: Response, request: Request):
+
+    if request.cookies.get('refresh_token') is None:
+        raise HTTPException(status_code=401, detail="Пользователь не в системе")
+    if request.cookies.get('access_token') is None:
+        raise HTTPException(status_code=401, detail="Пользователь не в системе")
+
     response.delete_cookie("refresh_token")
     response.delete_cookie("access_token")
     return {"message": "Пользователь разлогинен"}
