@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, Request, Query, HTTPException
 from app.Models.currency.currency_model import CurrencyRequest, CurrencyResponse, SortField, CurrencyUpdate
 from app.Models.other.enums import SortDirection
 from app.database.database import get_db_connection
+from app.helpers.auth.check_login import get_current_user
 
-router_currency = APIRouter(prefix="/currency", tags=["Валюта 💴"])
+router_currency = APIRouter(prefix="/currency", tags=["Валюта 💴"], dependencies=[Depends(get_current_user)])
 
 
 @router_currency.get("", response_model=list[CurrencyResponse], status_code=200, summary='Получить список валют 💸')

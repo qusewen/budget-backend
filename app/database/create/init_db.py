@@ -42,6 +42,49 @@ async def create_table():
     """
     )
     print("Таблица currency создана")
+
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS role (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            value NUMERIC(10, 6) NULL,
+            description TEXT NULL
+        )
+    """
+    )
+    print("Таблица role создана")
+
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS expense_types (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT NULL,
+            content TEXT NULL,
+            user_id INT NULL REFERENCES users(id)
+        )
+    """
+    )
+    print("Таблица expense_types создана")
+
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS budget_list (
+            id SERIAL PRIMARY KEY,
+            date TIMESTAMPTZ NULL,
+            name TEXT NOT NULL,
+            value NUMERIC(10, 6) NULL,
+            currency INT REFERENCES currency(id),
+            description TEXT NULL,
+            content TEXT NULL,
+            user_id INT REFERENCES users(id),
+            type_id INT NULL REFERENCES expense_types(id)
+        )
+    """
+    )
+    print("Таблица budget_list создана")
+
     await conn.close()
 
 
