@@ -45,15 +45,30 @@ async def get_currencies(id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router_currency.post("", response_model=CurrencyResponse, status_code=201, summary='Добавить новую валюту 💶')
-async def create_new_currency(currency: CurrencyRequest, db: asyncpg.Connection = Depends(get_db_connection)):
-    if id is None:
-        raise HTTPException(status_code=400, detail="Вы не передали id")
-    prev_currency = await db.fetchrow("SELECT * FROM currency WHERE name = $1", currency.name)
-    if prev_currency is not None:
-        raise HTTPException(status_code=400, detail="Данная валюта уже существует, обновите существующую, либо удалите ее")
-    await db.execute("INSERT INTO currency (name, value, short_name) VALUES ($1,$2, $3)", currency.name, currency.value, currency.short_name)
-    new_currency = await db.fetchrow("SELECT * FROM currency WHERE name = $1", currency.name)
-    return CurrencyResponse(**dict(new_currency))
+async def create_new_currency(
+        currency: CurrencyRequest,
+        db: AsyncSession = Depends(get_db)
+):
+    query = select(CurrencyAlchemy).where(CurrencyAlchemy.name == currency.name)
+    result = await db.execute(query)
+    existing_currency = result.scalar_one_or_none()
+
+    if existing_currency is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Данная валюта уже существует, обновите существующую, либо удалите ее"
+        )
+    new_currency = CurrencyAlchemy(
+        name=currency.name,
+        value=currency.value,
+        short_name=currency.short_name
+    )
+
+    db.add(new_currency)
+    await db.commit()
+    await db.refresh(new_currency)
+
+    return new_currency
 
 
 @router_currency.patch("/{id}", response_model=CurrencyResponse, status_code=200, summary='Обновить выбранную валюту 🔄')

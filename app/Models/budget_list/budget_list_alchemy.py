@@ -11,7 +11,7 @@ class BudgetList(Base):
     __tablename__ = "budget_list"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    date: Mapped[datetime] = mapped_column(DateTime)
+    date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     name: Mapped[str] = mapped_column(String(200))
     value: Mapped[float] = mapped_column(Float)
     currency: Mapped[int] = mapped_column(Integer)
