@@ -1,18 +1,19 @@
-import asyncpg
-from fastapi import APIRouter, Depends, Request, Query, HTTPException, Response
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.Models.currency.currency_alchemy import CurrencyAlchemy
 from app.Models.currency.currency_model import CurrencyRequest, CurrencyResponse, SortField, CurrencyUpdate
 from app.Models.other.enums import SortDirection
-from app.database.database import get_db_connection, get_db
+from app.Models.other.meta_data import PaginatedResponse
+from app.database.database import get_db
 from app.helpers.auth.check_login import get_current_user
+from app.helpers.other.meta_generator import meta_generator
 
 router_currency = APIRouter(prefix="/currency", tags=["Валюта 💴"], dependencies=[Depends(get_current_user)])
 
 
-@router_currency.get("", response_model=list[CurrencyResponse], status_code=200, summary='Получить список валют 💸')
+@router_currency.get("", response_model=PaginatedResponse[CurrencyResponse], status_code=200, summary='Получить список валют 💸')
 async def get_currencies(
         page: int = Query(1, description="Номер страницы"),
         per_page: int = Query(15, description="Элементов на странице"),
@@ -29,7 +30,10 @@ async def get_currencies(
     query = select(CurrencyAlchemy).order_by(sort_column).offset(offset).limit(per_page)
     result = await db.execute(query)
     currency = result.scalars().all()
-    return currency
+    pagination = await meta_generator(page, per_page, CurrencyAlchemy, db)
+
+    currencies_list = list(currency)
+    return PaginatedResponse(data = currencies_list, meta = pagination)
 
 
 
