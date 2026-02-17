@@ -21,6 +21,3 @@ class BudgetList(Base):
     type_id: Mapped[Optional[int]] = mapped_column(ForeignKey("expense_types.id"), nullable=True)
 
     type: Mapped[Optional["ExpenseType"]] = relationship()
-
-    def __repr__(self) -> str:
-        return f"BudgetList(id={self.id}, name={self.name})"

@@ -24,7 +24,7 @@ async def set_cookie(
         expires=max_age_refresh,
         samesite="lax",
         secure=True,
-        path="/",
+        path="/refresh_access_token",
     )
 
     response.set_cookie(

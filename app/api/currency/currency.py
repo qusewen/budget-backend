@@ -55,17 +55,19 @@ async def create_new_currency(currency: CurrencyRequest, db: asyncpg.Connection 
     new_currency = await db.fetchrow("SELECT * FROM currency WHERE name = $1", currency.name)
     return CurrencyResponse(**dict(new_currency))
 
-@router_currency.patch("/{id}", response_model=CurrencyResponse, status_code=200, summary='Обновить выбранную валюту 🔄')
-async def update_currency(id: int, update_data:CurrencyUpdate,  db: asyncpg.Connection = Depends(get_db_connection)):
-    if id is None:
-        raise HTTPException(status_code=400, detail="Вы не передали id")
-    existing = await db.fetchrow("SELECT * FROM currency WHERE id = $1", id)
-    if not existing:
-        raise HTTPException(status_code=404, detail=f"Валюта с id {id} не найдена")
 
-    update_fields = []
-    values = []
-    param_index = 2
+@router_currency.patch("/{id}", response_model=CurrencyResponse, status_code=200, summary='Обновить выбранную валюту 🔄')
+async def update_currency(
+        id: int,
+        update_data: CurrencyUpdate,
+        db: AsyncSession = Depends(get_db)
+):
+    query = select(CurrencyAlchemy).where(CurrencyAlchemy.id == id)
+    result = await db.execute(query)
+    currency = result.scalar_one_or_none()
+
+    if not currency:
+        raise HTTPException(status_code=404, detail=f"Валюта с id {id} не найдена")
 
     update_data_dict = update_data.model_dump(exclude_unset=True)
 
@@ -73,30 +75,24 @@ async def update_currency(id: int, update_data:CurrencyUpdate,  db: asyncpg.Conn
         raise HTTPException(status_code=400, detail="Нет полей для обновления")
 
     for field, value in update_data_dict.items():
-        update_fields.append(f"{field} = ${param_index}")
-        values.append(value)
-        param_index += 1
+        setattr(currency, field, value)
 
-    query = f"""
-        UPDATE currency 
-        SET {', '.join(update_fields)}
-        WHERE id = $1
-        RETURNING *
-    """
+    await db.commit()
+    await db.refresh(currency)
 
-    updated = await db.fetchrow(query, id, *values)
-
-    return CurrencyResponse(**dict(updated))
+    return currency
 
 
 
 
 @router_currency.delete("/{id}", status_code=200, summary="Удалить выбранную валюту ❌")
-async def delete_currency(id: int, db: asyncpg.Connection = Depends(get_db_connection)):
-    if id is None:
-        raise HTTPException(status_code=400, detail="Вы не передали id")
-    cur = await db.fetchrow("SELECT * FROM currency WHERE id = $1", id)
-    if cur is None:
+async def delete_currency(id: int, db: AsyncSession = Depends(get_db)):
+    query = select(CurrencyAlchemy).where(CurrencyAlchemy.id == id)
+    result = await db.execute(query)
+    currency = result.scalar_one_or_none()
+    if currency is None:
         raise HTTPException(status_code=404, detail="Данная валюта не найдена")
-    await db.execute("DELETE FROM currency WHERE id = $1", id)
+    await db.delete(currency)
+    await db.commit()
+
     return {"message": 'Валюта удалена'}
