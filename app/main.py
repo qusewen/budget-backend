@@ -6,6 +6,7 @@ from app.api.auth.register import router
 from app.api.auth_me.auth_me import router as login_router_auth
 from app.api.budget_list.budget_list import router_budget_list
 from app.api.currency.currency import router_currency
+from app.api.wallet.walet import router_wallet
 
 app = FastAPI()
 
@@ -15,6 +16,7 @@ app.include_router(login_router)
 app.include_router(login_router_auth)
 app.include_router(router_currency)
 app.include_router(router_budget_list)
+app.include_router(router_wallet)
 
 
 

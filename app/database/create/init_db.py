@@ -85,6 +85,21 @@ async def create_table():
     )
     print("Таблица budget_list создана")
 
+
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS wallet (
+            id SERIAL PRIMARY KEY,
+            value NUMERIC(10, 6) NULL,
+            currency_id INT REFERENCES currency(id),
+            description TEXT NULL,
+            user_id INT REFERENCES users(id),
+            is_general BOOLEAN NOT NULL DEFAULT false
+        )
+    """
+    )
+    print("Таблица wallet создана")
+
     await conn.close()
 
 
