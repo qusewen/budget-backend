@@ -1,9 +1,12 @@
 import asyncpg
-from fastapi import APIRouter, Depends, Request, Query, HTTPException
+from fastapi import APIRouter, Depends, Request, Query, HTTPException, Response
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.Models.currency.currency_alchemy import CurrencyAlchemy
 from app.Models.currency.currency_model import CurrencyRequest, CurrencyResponse, SortField, CurrencyUpdate
 from app.Models.other.enums import SortDirection
-from app.database.database import get_db_connection
+from app.database.database import get_db_connection, get_db
 from app.helpers.auth.check_login import get_current_user
 
 router_currency = APIRouter(prefix="/currency", tags=["Валюта 💴"], dependencies=[Depends(get_current_user)])
@@ -11,29 +14,34 @@ router_currency = APIRouter(prefix="/currency", tags=["Валюта 💴"], depe
 
 @router_currency.get("", response_model=list[CurrencyResponse], status_code=200, summary='Получить список валют 💸')
 async def get_currencies(
-    page: int = Query(1, description="Номер страницы"),
-    per_page: int = Query(15, description="Элементов на странице"),
-    sort_by: SortField = Query(SortField.ID, description="Поле для сортировки"),
-    sort_direction: SortDirection = Query(SortDirection.ASC, description="Направление сортировки"),
-    db: asyncpg.Connection = Depends(get_db_connection)):
+        page: int = Query(1, description="Номер страницы"),
+        per_page: int = Query(15, description="Элементов на странице"),
+        sort_by: SortField = Query(SortField.ID, description="Поле для сортировки"),
+        sort_direction: SortDirection = Query(SortDirection.ASC, description="Направление сортировки"),
+        db: AsyncSession = Depends(get_db)):
     offset = (page - 1) * per_page
-    query = f"""
-        SELECT * FROM currency 
-        ORDER BY {sort_by.value} {sort_direction.value} 
-        LIMIT $1 OFFSET $2
-    """
+    sort_column = getattr(CurrencyAlchemy, sort_by.value)
+    if sort_direction == SortDirection.ASC:
+        sort_column = sort_column.asc()
+    else:
+        sort_column = sort_column.desc()
 
-    rows = await db.fetch(query, per_page, offset)
-    return [CurrencyResponse(**dict(row)) for row in rows]
+    query = select(CurrencyAlchemy).order_by(sort_column).offset(offset).limit(per_page)
+    result = await db.execute(query)
+    currency = result.scalars().all()
+    return currency
 
 
 
 @router_currency.get("/{id}", response_model=CurrencyResponse, status_code=200, summary='Получить выбранную валюту 💸')
-async def get_currencies(id: int, db: asyncpg.Connection = Depends(get_db_connection)):
-    row = await db.fetchrow("SELECT * FROM currency WHERE id = $1", id)
-    if row is None:
+async def get_currencies(id: int, db: AsyncSession = Depends(get_db)):
+    query = select(CurrencyAlchemy).where(CurrencyAlchemy.id == id)
+    result = await db.execute(query)
+    currency = result.scalar_one_or_none()
+
+    if currency is None:
         raise HTTPException(status_code=404, detail="Данная валюта не найдена")
-    return CurrencyResponse(**dict(row))
+    return currency
 
 
 @router_currency.post("", response_model=CurrencyResponse, status_code=201, summary='Добавить новую валюту 💶')

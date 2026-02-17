@@ -8,5 +8,4 @@ router = APIRouter(prefix="/auth", tags=["Авторизация 🔓"])
 
 @router.get("/me", response_model=UserWrapper, summary="Получить данные пользователя в системе 🙍‍♂️")
 async def auth_me(current_user=Depends(get_current_user)):
-    user_dict = dict(current_user)
-    return {"user": user_dict}
+    return {"user": current_user}

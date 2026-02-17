@@ -36,8 +36,8 @@ class Login(BaseModel):
 
 class LoginResponse(BaseModel):
     message: str
-    refresh_token: str = None
-    access_token: str = None
+    refresh_token: str | None = None
+    access_token: str | None = None
 
 
 class AuthMessage(BaseModel):
