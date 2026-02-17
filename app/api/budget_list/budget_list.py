@@ -1,27 +1,30 @@
 from fastapi import APIRouter, Depends, Request, Query, Response, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.Models.budget_list.budget_list_alchemy import BudgetList
 
 from app.Models.other.enums import SortDirection
+from app.Models.other.meta_data import PaginatedResponse
 from app.database.database import get_db
 
 from app.Models.budget_list.budget_list import BudgetListResponse, BudgetListCreate, BudgetListUpdate, SortField
 from app.helpers.auth.check_login import get_current_user
 from app.helpers.auth.check_role import check_is_admin_role
+from app.helpers.other.meta_generator import meta_generator
 from app.helpers.update.check_fields import validate_foreign_keys
 
 router_budget_list = APIRouter(prefix="/budget", tags=["Затраты 💴"], dependencies=[Depends(get_current_user)])
 
 
-@router_budget_list.get("", response_model=list[BudgetListResponse], status_code=200, summary="Получить все затраты 💵")
+@router_budget_list.get("", response_model=PaginatedResponse[BudgetListResponse], status_code=200,
+                        summary="Получить все затраты 💵")
 async def get_currencies(
         request: Request,
         response: Response,
-        page: int = Query(1, description="Номер страницы"),
-        per_page: int = Query(15, description="Элементов на странице"),
+        page: int = Query(1, ge=1, description="Номер страницы"),
+        per_page: int = Query(15, ge=1, le=100, description="Элементов на странице"),
         sort_by: SortField = Query(SortField.ID, description="Поле для сортировки"),
         sort_direction: SortDirection = Query(SortDirection.ASC, description="Направление сортировки"),
         db: AsyncSession = Depends(get_db)):
@@ -36,18 +39,23 @@ async def get_currencies(
     else:
         sort_column = sort_column.desc()
 
-
     query = select(BudgetList).options(
         selectinload(BudgetList.type)
     )
+
     if not is_admin:
         query = query.where(BudgetList.user_id == user_id)
 
     query = query.order_by(sort_column).offset(offset).limit(per_page)
-
+    pagination = await meta_generator(page, per_page, BudgetList, db)
     result = await db.execute(query)
     budgets = result.scalars().all()
-    return budgets
+    budgets_list = list(budgets)
+
+    return PaginatedResponse(
+        data=budgets_list,
+        meta=pagination
+    )
 
 
 @router_budget_list.post("", response_model=BudgetListResponse, status_code=201, summary="Добавить новую затрату 💶")
