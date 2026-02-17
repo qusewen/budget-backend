@@ -2,6 +2,9 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 
+from enum import Enum
+
+
 class BudgetTypeResponse(BaseModel):
     id: int
     name: str
@@ -10,6 +13,16 @@ class BudgetTypeResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class SortField(str, Enum):
+    ID = "id"
+    NAME = "name"
+    VALUE = "value"
+    CONTENT = "content"
+    TYPE = "type_id"
+    CURRENCY = "currency"
+    DATE = "date"
 
 class BudgetListCreate(BaseModel):
     date: datetime = Field(...)
@@ -22,6 +35,18 @@ class BudgetListCreate(BaseModel):
 
     class Config:
         from_attributes = True
+
+class BudgetListUpdate(BaseModel):
+        date: Optional[datetime] = None
+        name: Optional[str] = None
+        value: Optional[float] = None
+        currency: Optional[int] = None
+        description: Optional[str] = None
+        content: Optional[str] = None
+        type_id: Optional[int] = None
+
+        class Config:
+            from_attributes = True
 
 class BudgetListResponse(BaseModel):
     id: int

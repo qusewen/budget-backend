@@ -14,7 +14,7 @@ class BudgetList(Base):
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     name: Mapped[str] = mapped_column(String(200))
     value: Mapped[float] = mapped_column(Float)
-    currency: Mapped[int] = mapped_column(Integer)
+    currency: Mapped[int] = mapped_column(ForeignKey("currency.id"), nullable=True)
     description: Mapped[str] = mapped_column(Text)
     content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     user_id: Mapped[int] = mapped_column(Integer, index=True)
