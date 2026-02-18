@@ -3,3 +3,5 @@
 *.
 app/alembic.ini
 app/alembic
+.idea
+.app/__pycache__
