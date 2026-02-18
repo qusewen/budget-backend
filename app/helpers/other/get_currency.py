@@ -44,7 +44,6 @@ async def get_currency_one(db: AsyncSession = Depends(get_db), type_id: int | No
     cur_res = cur.scalar_one_or_none()
 
     names = cur_res.short_name
-    print(names)
     query_type=select(CurrencyAlchemy).where(CurrencyAlchemy.id == type_id)
     cur_type = await db.execute(query_type)
     cur_res_type = cur_type.scalar_one_or_none()
