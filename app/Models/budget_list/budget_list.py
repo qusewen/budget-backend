@@ -32,6 +32,7 @@ class BudgetListCreate(BaseModel):
     description: str = Field(...)
     content: Optional[str] = Field(None)
     type_id: int = Field(...)
+    wallet_id: int = Field(...)
 
     class Config:
         from_attributes = True

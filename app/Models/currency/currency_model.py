@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict
 from fastapi import HTTPException
 from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 from enum import Enum
@@ -98,3 +98,14 @@ class CurrencyUpdate(BaseModel):
          if v is not None and v <= 0:
            raise ValueError(f"Значение должно быть больше 0, получено {v}")
          return v
+
+
+
+class CurrencyApiData(BaseModel):
+    success: bool
+    terms: str
+    privacy: str
+    timestamp: int
+    source: str
+    quotes: Dict[str, float]
+    fields: str

@@ -7,11 +7,13 @@ from app.Models.budget_list.budget_list_alchemy import BudgetList
 
 from app.Models.other.enums import SortDirection
 from app.Models.other.meta_data import PaginatedResponse
+from app.Models.wallet.wallet_model_alchemy import Wallet
 from app.database.database import get_db
 
 from app.Models.budget_list.budget_list import BudgetListResponse, BudgetListCreate, BudgetListUpdate, SortField
 from app.helpers.auth.check_login import get_current_user
 from app.helpers.auth.check_role import check_is_admin_role
+from app.helpers.other.get_currency import get_currency, get_currency_one
 from app.helpers.other.meta_generator import meta_generator
 from app.helpers.update.check_fields import validate_foreign_keys
 
@@ -67,6 +69,23 @@ async def create_budget(budget: BudgetListCreate,
     user = await get_current_user(request, response, db)
     user_id = user.id
 
+    wallet = select(Wallet).where(Wallet.user_id == user_id, Wallet.id == budget.wallet_id).with_for_update()
+    wallet_result = await db.execute(wallet)
+    wallet_res = wallet_result.scalar_one_or_none()
+    if wallet_res is None:
+        raise HTTPException(status_code=400, detail="Данного кошелька не существует")
+
+    result_cur_data = await get_currency_one(db, budget.currency, wallet_res.currency_id)
+    new_budget = budget.value * result_cur_data.quotes[result_cur_data.fields]
+
+    if wallet_res.value < new_budget:
+        raise HTTPException(status_code=400, detail="Недостаточно средств")
+
+    print(result_cur_data)
+
+
+    wallet_res.value -= new_budget
+    db.add(wallet_res)
     new_budget = BudgetList(
         name=budget.name,
         description=budget.description,

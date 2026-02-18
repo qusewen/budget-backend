@@ -29,3 +29,9 @@ class WalletResponse(WalletBase):
 
     class Config:
         from_attributes = True
+
+
+class CurrencyApiData(BaseModel):
+    success: bool
+    source: str
+    value: float
