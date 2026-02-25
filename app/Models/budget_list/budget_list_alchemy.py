@@ -19,5 +19,7 @@ class BudgetList(Base):
     content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     user_id: Mapped[int] = mapped_column(Integer, index=True)
     type_id: Mapped[Optional[int]] = mapped_column(ForeignKey("expense_types.id"), nullable=True)
+    currency_value: Mapped[Optional[float]] = mapped_column(Float)
+    wallet_id: Mapped[int] = mapped_column(ForeignKey("wallet.id"), nullable=True)
 
     type: Mapped[Optional["ExpenseType"]] = relationship()

@@ -45,6 +45,8 @@ class BudgetListUpdate(BaseModel):
         description: Optional[str] = None
         content: Optional[str] = None
         type_id: Optional[int] = None
+        currency_value: Optional[float] = None
+        wallet_id: Optional[int] = None
 
         class Config:
             from_attributes = True
@@ -58,6 +60,8 @@ class BudgetListResponse(BaseModel):
     description: str
     content: Optional[str] = None
     type: BudgetTypeResponse
+    currency_value: Optional[float] = None
+    wallet_id: Optional[int] = None
 
     class Config:
         from_attributes = True

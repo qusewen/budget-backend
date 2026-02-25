@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.Models.budget_list.budget_list_alchemy import BudgetList
+from app.Models.expense_type.expense_type import ExpenseType
 
 from app.Models.other.enums import SortDirection
 from app.Models.other.meta_data import PaginatedResponse
@@ -72,8 +73,18 @@ async def create_budget(budget: BudgetListCreate,
     wallet = select(Wallet).where(Wallet.user_id == user_id, Wallet.id == budget.wallet_id).with_for_update()
     wallet_result = await db.execute(wallet)
     wallet_res = wallet_result.scalar_one_or_none()
+
+
+    types_query = select(ExpenseType).where(ExpenseType.id == budget.type_id)
+    types_result = await db.execute(types_query)
+    types = types_result.scalar_one_or_none()
+
+
     if wallet_res is None:
         raise HTTPException(status_code=400, detail="Данного кошелька не существует")
+
+    if types is None:
+        raise HTTPException(status_code=400, detail="Данного типа затрат не существует")
 
     result_cur_data = await get_currency_one(db, budget.currency, wallet_res.currency_id)
     new_budget = budget.value * result_cur_data.quotes[result_cur_data.fields]
@@ -95,6 +106,8 @@ async def create_budget(budget: BudgetListCreate,
         content=budget.content,
         user_id=user_id,
         type_id=budget.type_id,
+        currency_value= result_cur_data.quotes[result_cur_data.fields],
+        wallet_id = wallet_res.id
     )
     db.add(new_budget)
     await db.commit()
@@ -125,10 +138,10 @@ async def update_budget(
         raise HTTPException(status_code=404, detail=f"Затрата с id {id} не найдена")
 
     update_data_dict = update_data.model_dump(exclude_unset=True)
-    print(f"Данные для обновления: {update_data_dict}")
+
     if not is_admin and budget.user_id != user_id:
         raise HTTPException(status_code=403,
-                            detail="У пользователя нет прав на редактирование данной записи")  # 403 Forbidden
+                            detail="У пользователя нет прав на редактирование данной записи")
 
     if not update_data_dict:
         raise HTTPException(status_code=400, detail="Нет полей для обновления")
@@ -159,10 +172,22 @@ async def delete_currency(
     query = select(BudgetList).where(BudgetList.id == id)
     result = await db.execute(query)
     budget = result.scalar_one_or_none()
+
+
     if is_admin == False and budget.user_id != user_id:
         raise HTTPException(status_code=400, detail="У пользователя нет данной записи")
     if budget is None:
         raise HTTPException(status_code=404, detail="Затрата не найдена")
+
+    wallet = select(Wallet).where(Wallet.user_id == user_id, Wallet.id == budget.wallet_id).with_for_update()
+    wallet_result = await db.execute(wallet)
+    wallet_res = wallet_result.scalar_one_or_none()
+
+    new_budget = budget.value * budget.currency_value
+
+    wallet_res.value += new_budget
+    db.add(wallet_res)
+
     await db.delete(budget)
     await db.commit()
 
