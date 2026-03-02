@@ -107,13 +107,13 @@ async def create_budget(budget: BudgetListCreate,
         user_id=user_id,
         type_id=budget.type_id,
         currency_value= result_cur_data.quotes[result_cur_data.fields],
-        wallet_id = wallet_res.id
+        wallet_id = wallet_res.id,
+        type_budget = 'expense'
     )
     db.add(new_budget)
     await db.commit()
 
     await db.refresh(new_budget, attribute_names=["type"])
-
 
     return new_budget
 

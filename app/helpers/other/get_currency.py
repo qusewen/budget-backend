@@ -37,14 +37,14 @@ async def get_currency(db: AsyncSession = Depends(get_db), type_id: int | None =
         return response.json()
 
 
-async def get_currency_one(db: AsyncSession = Depends(get_db), type_id: int | None = None, wallet_type_id: int | None  = None) -> CurrencyApiData:
-
-    query=select(CurrencyAlchemy).where(CurrencyAlchemy.id == wallet_type_id)
+async def get_currency_one(db: AsyncSession = Depends(get_db), type_id: int | None = None,
+                           wallet_type_id: int | None = None) -> CurrencyApiData:
+    query = select(CurrencyAlchemy).where(CurrencyAlchemy.id == wallet_type_id)
     cur = await db.execute(query)
     cur_res = cur.scalar_one_or_none()
 
     names = cur_res.short_name
-    query_type=select(CurrencyAlchemy).where(CurrencyAlchemy.id == type_id)
+    query_type = select(CurrencyAlchemy).where(CurrencyAlchemy.id == type_id)
     cur_type = await db.execute(query_type)
     cur_res_type = cur_type.scalar_one_or_none()
 
@@ -55,8 +55,14 @@ async def get_currency_one(db: AsyncSession = Depends(get_db), type_id: int | No
         response = await client.get(url)
         response.raise_for_status()
         data = response.json()
-        data['fields'] = f'{type_name}{names}'
 
+        currency_key = f'{type_name}{names}'
+        data['fields'] = currency_key
+
+        if not data.get('quotes') or data['quotes'] == []:
+            data['quotes'] = {currency_key: 1.0}
+
+        print(data)
         currency_data = CurrencyApiData(**data)
 
         return currency_data

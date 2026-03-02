@@ -23,6 +23,7 @@ class SortField(str, Enum):
     TYPE = "type_id"
     CURRENCY = "currency"
     DATE = "date"
+    type_budget = "type_budget"
 
 class BudgetListCreate(BaseModel):
     date: datetime = Field(...)
@@ -62,6 +63,6 @@ class BudgetListResponse(BaseModel):
     type: BudgetTypeResponse
     currency_value: Optional[float] = None
     wallet_id: Optional[int] = None
-
+    type_budget: str
     class Config:
         from_attributes = True
