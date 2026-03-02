@@ -60,7 +60,7 @@ class BudgetListResponse(BaseModel):
     currency: int
     description: str
     content: Optional[str] = None
-    type: BudgetTypeResponse
+    type: Optional[BudgetTypeResponse] = None
     currency_value: Optional[float] = None
     wallet_id: Optional[int] = None
     type_budget: str

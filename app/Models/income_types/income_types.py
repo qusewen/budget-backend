@@ -1,12 +1,12 @@
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, Text, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Text, ForeignKey
 from typing import Optional
 
 from app.Models.base_model_type.base_model_type import BaseType
 
 
-class ExpenseType(BaseType):
-    __tablename__ = "expense_types"
+class IncomeType(BaseType):
+    __tablename__ = "income_types"
 
     id: Mapped[int] = mapped_column(ForeignKey("base_types.id"), primary_key=True)
 
@@ -15,5 +15,5 @@ class ExpenseType(BaseType):
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'), nullable=False)
 
     __mapper_args__ = {
-        "polymorphic_identity": "expense"
+        "polymorphic_identity": "income"
     }

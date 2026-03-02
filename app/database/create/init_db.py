@@ -100,6 +100,35 @@ async def create_table():
     )
     print("Таблица wallet создана")
 
+
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS income_types (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT NULL,
+            content TEXT NULL,
+            user_id INT NULL REFERENCES users(id)
+        )
+    """
+    )
+    print("Таблица income_types создана")
+
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS base_types (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(200) NOT NULL,
+            type VARCHAR(50) NOT NULL
+        )
+    """)
+
+    await conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_base_types_type 
+        ON base_types(type)
+    """)
+
+    print("base_types income_types создана")
+
     await conn.close()
 
 

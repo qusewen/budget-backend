@@ -11,20 +11,24 @@ from app.Models.other.meta_data import PaginatedResponse
 from app.Models.wallet.wallet_model_alchemy import Wallet
 from app.database.database import get_db
 
-from app.Models.budget_list.budget_list import BudgetListResponse, BudgetListCreate, BudgetListUpdate, SortField, \
-    BudgetTypeResponse
+from app.Models.budget_list.budget_list import SortField, BudgetListResponse, BudgetListCreate, BudgetTypeResponse, \
+    BudgetListUpdate
 from app.helpers.auth.check_login import get_current_user
 from app.helpers.auth.check_role import check_is_admin_role
-from app.helpers.other.get_currency import get_currency, get_currency_one
+from app.helpers.other.get_currency import get_currency_one
 from app.helpers.other.meta_generator import meta_generator
 from app.helpers.update.check_fields import validate_foreign_keys
 
-router_budget_list = APIRouter(prefix="/budget", tags=["Затраты 💴"], dependencies=[Depends(get_current_user)])
+router_income_list = APIRouter(prefix="/income", tags=["Доходы 💴"], dependencies=[Depends(get_current_user)])
 
 
-@router_budget_list.get("", response_model=PaginatedResponse[BudgetListResponse], status_code=200,
-                        summary="Получить все затраты 💵")
-async def get_expenses(
+@router_income_list.get(
+    '',
+    response_model=PaginatedResponse[BudgetListResponse],
+    status_code=200,
+    summary='Получить все доходы'
+)
+async def income_list(
         request: Request,
         response: Response,
         page: int = Query(1, ge=1, description="Номер страницы"),
@@ -47,7 +51,7 @@ async def get_expenses(
     query = select(BudgetList)
 
     if not is_admin:
-        query = query.where(BudgetList.user_id == user_id, BudgetList.type_budget == 'expense')
+        query = query.where(BudgetList.user_id == user_id, BudgetList.type_budget == 'income')
 
     query = query.order_by(sort_column).offset(offset).limit(per_page)
     pagination = await meta_generator(page, per_page, BudgetList, db)
@@ -110,7 +114,7 @@ async def get_expenses(
     )
 
 
-@router_budget_list.post("", response_model=BudgetListResponse, status_code=201, summary="Добавить новую затрату 💶")
+@router_income_list.post("", response_model=BudgetListResponse, status_code=201, summary="Добавить доход 💶")
 async def create_budget(budget: BudgetListCreate,
                         request: Request,
                         response: Response,
@@ -124,7 +128,7 @@ async def create_budget(budget: BudgetListCreate,
     wallet_res = wallet_result.scalar_one_or_none()
 
 
-    types_query = select(ExpenseType).where(ExpenseType.id == budget.type_id)
+    types_query = select(IncomeType).where(IncomeType.id == budget.type_id)
     types_result = await db.execute(types_query)
     types = types_result.scalar_one_or_none()
 
@@ -133,18 +137,12 @@ async def create_budget(budget: BudgetListCreate,
         raise HTTPException(status_code=400, detail="Данного кошелька не существует")
 
     if types is None:
-        raise HTTPException(status_code=400, detail="Данного типа затрат не существует")
+        raise HTTPException(status_code=400, detail="Данного типа дохода не существует")
 
     result_cur_data = await get_currency_one(db, budget.currency, wallet_res.currency_id)
     new_budget = budget.value * result_cur_data.quotes[result_cur_data.fields]
 
-    if wallet_res.value < new_budget:
-        raise HTTPException(status_code=400, detail="Недостаточно средств")
-
-    print(result_cur_data)
-
-
-    wallet_res.value -= new_budget
+    wallet_res.value += new_budget
     db.add(wallet_res)
     new_budget = BudgetList(
         name=budget.name,
@@ -157,7 +155,58 @@ async def create_budget(budget: BudgetListCreate,
         type_id=budget.type_id,
         currency_value= result_cur_data.quotes[result_cur_data.fields],
         wallet_id = wallet_res.id,
-        type_budget = 'expense'
+        type_budget = 'income'
+    )
+    db.add(new_budget)
+    await db.commit()
+    await db.refresh(new_budget, attribute_names=["type"])
+
+    return new_budget
+
+@router_income_list.post("", response_model=BudgetListResponse, status_code=201, summary="Добавить доход 💶")
+async def create_budget(budget: BudgetListCreate,
+                        request: Request,
+                        response: Response,
+                        db: AsyncSession = Depends(get_db)
+                        ):
+    user = await get_current_user(request, response, db)
+    user_id = user.id
+
+    wallet = select(Wallet).where(Wallet.user_id == user_id, Wallet.id == budget.wallet_id).with_for_update()
+    wallet_result = await db.execute(wallet)
+    wallet_res = wallet_result.scalar_one_or_none()
+
+
+    types_query = select(IncomeType).where(IncomeType.id == budget.type_id)
+    types_result = await db.execute(types_query)
+    types = types_result.scalar_one_or_none()
+
+
+    if wallet_res is None:
+        raise HTTPException(status_code=400, detail="Данного кошелька не существует")
+
+    if types is None:
+        raise HTTPException(status_code=400, detail="Данного типа дохода не существует")
+
+    result_cur_data = await get_currency_one(db, budget.currency, wallet_res.currency_id)
+    new_budget = budget.value * result_cur_data.quotes[result_cur_data.fields]
+
+
+
+    wallet_res.value += new_budget
+    db.add(wallet_res)
+    new_budget = BudgetList(
+        name=budget.name,
+        description=budget.description,
+        date=budget.date,
+        value=budget.value,
+        currency=budget.currency,
+        content=budget.content,
+        user_id=user_id,
+        type_id=budget.type_id,
+        currency_value= result_cur_data.quotes[result_cur_data.fields],
+        wallet_id = wallet_res.id,
+        type_budget = 'income'
     )
     db.add(new_budget)
     await db.commit()
@@ -167,8 +216,8 @@ async def create_budget(budget: BudgetListCreate,
     return new_budget
 
 
-@router_budget_list.patch("/{id}", response_model=BudgetListResponse, status_code=200,
-                          summary='Обновить выбранную затрату ✏️')
+@router_income_list.patch("/{id}", response_model=BudgetListResponse, status_code=200,
+                          summary='Обновить выбранный доход ✏️')
 async def update_budget(
         id: int,
         update_data: BudgetListUpdate,
@@ -184,7 +233,7 @@ async def update_budget(
     is_admin = await check_is_admin_role(request, response, db)
 
     if not budget:
-        raise HTTPException(status_code=404, detail=f"Затрата с id {id} не найдена")
+        raise HTTPException(status_code=404, detail=f"Доход с id {id} не найдена")
 
     update_data_dict = update_data.model_dump(exclude_unset=True)
 
@@ -208,7 +257,7 @@ async def update_budget(
     return budget
 
 
-@router_budget_list.delete("/{id}",status_code=200, summary="Удалить выбранную затрату ❌")
+@router_income_list.delete("/{id}",status_code=200, summary="Удалить выбранный доход ❌")
 async def delete_currency(
         id: int,
         request: Request,
@@ -226,7 +275,7 @@ async def delete_currency(
     if is_admin == False and budget.user_id != user_id:
         raise HTTPException(status_code=400, detail="У пользователя нет данной записи")
     if budget is None:
-        raise HTTPException(status_code=404, detail="Затрата не найдена")
+        raise HTTPException(status_code=404, detail="Доход не найден")
 
     wallet = select(Wallet).where(Wallet.user_id == user_id, Wallet.id == budget.wallet_id).with_for_update()
     wallet_result = await db.execute(wallet)
@@ -234,10 +283,10 @@ async def delete_currency(
 
     new_budget = budget.value * budget.currency_value
 
-    wallet_res.value += new_budget
+    wallet_res.value -= new_budget
     db.add(wallet_res)
 
     await db.delete(budget)
     await db.commit()
 
-    return {"message": "Затрата удалена"}
+    return {"message": "Доход удален"}

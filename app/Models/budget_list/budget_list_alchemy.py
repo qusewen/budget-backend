@@ -3,7 +3,7 @@ from sqlalchemy import String, Float, Integer, DateTime, ForeignKey, Text
 from typing import Optional
 from datetime import datetime
 
-from app.Models.expense_type.expense_type import ExpenseType
+from app.Models.base_model_type.base_model_type import BaseType
 from app.database.base import Base
 
 
@@ -19,8 +19,8 @@ class BudgetList(Base):
     type_budget: Mapped[str] = mapped_column(Text)
     content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     user_id: Mapped[int] = mapped_column(Integer, index=True)
-    type_id: Mapped[Optional[int]] = mapped_column(ForeignKey("expense_types.id"), nullable=True)
+    type_id: Mapped[Optional[int]] = mapped_column(ForeignKey("base_types.id"), nullable=True)
     currency_value: Mapped[Optional[float]] = mapped_column(Float)
     wallet_id: Mapped[int] = mapped_column(ForeignKey("wallet.id"), nullable=True)
 
-    type: Mapped[Optional["ExpenseType"]] = relationship()
+    type: Mapped[Optional["BaseType"]] = relationship()
