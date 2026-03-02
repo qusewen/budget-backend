@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.Models.other.meta_data import PaginatedResponse
-from app.Models.wallet.wallet_model import WalletResponse, WalletCreate, WalletUpdateValue
+from app.Models.wallet.wallet_model import WalletResponse, WalletCreate, WalletUpdateValue, WalletUpdate
 from app.Models.wallet.wallet_model_alchemy import Wallet
 from app.database.database import get_db
 from app.helpers.auth.check_login import get_current_user
@@ -85,15 +85,52 @@ async def create_wallet(
 
     return wallet_dto
 
-#
-# @router_wallet.patch("/id", response_model=WalletResponse, status_code=200, summary='Манипуляции с сумой на кошельке')
-# async def update_wallet(
-#         update_data: WalletUpdateValue,
-#         request: Request,
-#         response: Response,
-#         db: AsyncSession = Depends(get_db)):
-#     user = await get_current_user(request, response, db)
-#     user_id = user.id
-#
-#
-#
+
+@router_wallet.delete("/id", status_code=201, summary='Удалить кошелек ❌')
+async def delete_wallet(id: int,  request: Request,
+        response: Response, db: AsyncSession = Depends(get_db) ):
+    wallet_query = select(Wallet).where(Wallet.id == id)
+    wallet = await db.execute(wallet_query)
+    wallet_res = wallet.scalar_one_or_none()
+    if wallet_res is None:
+        raise HTTPException(status_code=404, detail='Кошелек не найден')
+
+    user = await get_current_user(request, response, db)
+    user_id = user.id
+
+    if wallet_res.user_id != user_id:
+        raise HTTPException(status_code=400, detail='Кошелек не относистя к авторизованному пользователю')
+
+
+    await db.delete(wallet_res)
+    await db.commit()
+
+    return {"message": "Кошелек успешно удален"}
+
+
+@router_wallet.patch("/id", status_code= 200, response_model=WalletResponse, summary="Изменить даные кошелька 💰")
+async def update_wallet(id: int, new_wallet_data: WalletUpdate, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+    wallet_query = select(Wallet).where(Wallet.id == id).with_for_update()
+    wallet = await db.execute(wallet_query)
+    wallet_res = wallet.scalar_one_or_none()
+    if wallet_res is None:
+        raise HTTPException(status_code=404, detail='Кошелек не найден')
+
+    user = await get_current_user(request, response, db)
+    user_id = user.id
+
+    if wallet_res.user_id != user_id:
+        raise HTTPException(status_code=400, detail='Кошелек не относистя к авторизованному пользователю')
+    update_wallet_dict = new_wallet_data.model_dump(exclude_unset=True)
+
+
+    if not update_wallet_dict:
+        raise HTTPException(status_code=400, detail="Нет полей для обновления")
+
+    for field, value in update_wallet_dict.items():
+        setattr(wallet_res, field, value)
+
+    await db.commit()
+    await db.refresh(wallet_res, attribute_names=["currency"])
+
+    return wallet_res
