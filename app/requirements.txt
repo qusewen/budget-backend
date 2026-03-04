@@ -1,0 +1,9 @@
+bcrypt
+starlette
+asyncpg
+fastapi
+python-jose
+python-dotenv
+boto3
+python-multipart
+uvicorn
