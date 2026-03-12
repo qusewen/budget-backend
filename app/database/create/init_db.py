@@ -18,6 +18,8 @@ DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NA
 
 async def create_table():
     conn = await asyncpg.connect(DATABASE_URL)
+
+    # Твои существующие таблицы
     await conn.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
@@ -85,7 +87,6 @@ async def create_table():
     )
     print("Таблица budget_list создана")
 
-
     await conn.execute(
         """
         CREATE TABLE IF NOT EXISTS wallet (
@@ -99,7 +100,6 @@ async def create_table():
     """
     )
     print("Таблица wallet создана")
-
 
     await conn.execute(
         """
@@ -121,13 +121,41 @@ async def create_table():
             type VARCHAR(50) NOT NULL
         )
     """)
+    print("base_types создана")
 
     await conn.execute("""
         CREATE INDEX IF NOT EXISTS idx_base_types_type 
         ON base_types(type)
     """)
 
-    print("base_types income_types создана")
+    # 👇 ДОБАВЛЯЕМ ТАБЛИЦУ АУДИТА
+    await conn.execute("""
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id SERIAL PRIMARY KEY,
+            timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            user_id VARCHAR(100),
+            action VARCHAR(50) NOT NULL,
+            resource VARCHAR(100) NOT NULL,
+            resource_id VARCHAR(100),
+            details JSONB,
+            ip_address VARCHAR(50),
+            user_agent TEXT
+        )
+    """)
+    print("Таблица audit_logs создана")
+
+    # Индексы для audit_logs
+    await conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp 
+        ON audit_logs(timestamp DESC)
+    """)
+
+    await conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id 
+        ON audit_logs(user_id)
+    """)
+
+    print("Индексы для audit_logs созданы")
 
     await conn.close()
 

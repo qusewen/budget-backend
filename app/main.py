@@ -9,6 +9,7 @@ from app.api.currency.currency import router_currency
 from app.api.income.income import router_income_list
 from app.api.user.user import router_user
 from app.api.wallet.walet import router_wallet
+from app.audit_middleware import AuditMiddleware
 from app.s3_service import S3Service
 
 app = FastAPI()
@@ -24,6 +25,7 @@ app.include_router(router_income_list)
 app.include_router(router_budget_list)
 app.include_router(router_wallet)
 app.include_router(router_user)
+app.add_middleware(AuditMiddleware)
 
 
 if __name__ == "__main__":
