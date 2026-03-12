@@ -8,10 +8,10 @@ from app.Models.role.role_types import RoleTypeResponse
 from app.database.database import get_db
 from app.helpers.auth.check_login import get_current_user
 
-router_user = APIRouter(prefix="/user", tags=["Пользователь  🕺"], dependencies=[Depends(get_current_user)])
+router_user = APIRouter(prefix="/user", tags=["Пользователь 🕺"], dependencies=[Depends(get_current_user)])
 
 
-@router_user.get("", response_model=CurrentUserResponse)
+@router_user.get("", response_model=CurrentUserResponse, summary='Получить данный пользователя 🌐', status_code=200)
 async def get_current_user_for_app(
         request: Request,
         response: Response,
