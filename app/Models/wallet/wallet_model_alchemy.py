@@ -13,7 +13,7 @@ class Wallet(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     value: Mapped[float]
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     description: Mapped[str] = mapped_column(String(255), nullable=True)
     currency_id: Mapped[int] = mapped_column(ForeignKey("currency.id"), nullable=False)
     is_general: Mapped[bool]

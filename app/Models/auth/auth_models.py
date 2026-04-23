@@ -34,6 +34,18 @@ class CurrentUserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class UpdateUser(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    is_active: Optional[bool] = None
+    id: Optional[int] = None
+    content: Optional[str] = None
+    role_id: Optional[int] = None
+    age: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
 
 class UserWrapper(BaseModel):
     user: UserResponse

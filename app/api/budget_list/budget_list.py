@@ -158,7 +158,10 @@ async def create_budget(
     parsed_date = datetime.fromisoformat(date.replace('Z', '+00:00'))
 
     file = content
-    object_name = s3.upload_file(file)
+    object_name = None
+    if file is not None:
+        object_name = s3.upload_file(file)
+
     wallet_res.value -= new_budget
     db.add(wallet_res)
     new_budget = BudgetList(
