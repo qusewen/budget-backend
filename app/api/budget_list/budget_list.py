@@ -154,7 +154,6 @@ async def create_budget(
     if wallet_res.value < new_budget:
         raise HTTPException(status_code=400, detail="Недостаточно средств")
 
-    print(result_cur_data)
     parsed_date = datetime.fromisoformat(date.replace('Z', '+00:00'))
 
     file = content

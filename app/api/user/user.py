@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, status, Response, HTTPException
+from fastapi import APIRouter, Depends, Request, status, Response, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -9,9 +9,11 @@ from app.Models.role.role_types import RoleTypeResponse
 from app.database.database import get_db
 from app.helpers.auth.check_login import get_current_user
 from app.helpers.update.check_fields import validate_foreign_keys
+from app.s3_service import S3Service
 
 router_user = APIRouter(prefix="/user", tags=["Пользователь 🕺"], dependencies=[Depends(get_current_user)])
 
+s3 = S3Service()
 
 @router_user.get("", response_model=CurrentUserResponse, summary='Получить данный пользователя 🌐', status_code=200)
 async def get_current_user_for_app(
@@ -68,7 +70,6 @@ async def patch_current_user(
             )
 
 
-
     await validate_foreign_keys(db, user, update_data_dict)
     for field, value in update_data_dict.items():
         setattr(user, field, value)
@@ -90,3 +91,23 @@ async def delete_current_user(
         await db.delete(user)
         await db.commit()
         return {"message": "Пользователь удален"}
+
+
+@router_user.patch("/avatar", response_model=CurrentUserResponse, status_code=200,
+                   summary='Обновить аватар пользователя')
+async def update_user_avatar(
+        request: Request,
+        response: Response,
+        avatar: UploadFile = File(...),
+        db: AsyncSession = Depends(get_db),
+):
+    user = await get_current_user(request, response, db)
+
+    object_name = s3.upload_file(avatar)
+
+    user.content = object_name
+
+    await db.commit()
+    await db.refresh(user, attribute_names=["role"])
+
+    return user
