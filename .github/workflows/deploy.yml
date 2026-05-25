@@ -11,12 +11,15 @@ jobs:
   build-and-push:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ЭТОТ ШАГ - САМЫЙ ВАЖНЫЙ. ОН МЕНЯЕТ ДРАЙВЕР.
       - name: Set up Docker Buildx with container driver
         uses: docker/setup-buildx-action@v3
         with:
@@ -37,6 +40,5 @@ jobs:
           tags: |
             ${{ env.DOCKER_IMAGE }}:latest
             ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
-          # А вот теперь, ПОСЛЕ смены драйвера, кэш НАЧНЁТ РАБОТАТЬ
           cache-from: type=gha
           cache-to: type=gha,mode=max
