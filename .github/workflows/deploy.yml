@@ -1,95 +1,26 @@
 name: CI/CD Pipeline
 
-
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 env:
-  DOCKER_IMAGE: ghcr.io/${{ github.repository_owner }}/fastapi-app
-  DOCKER_TAG: ${{ github.sha }}
+  DOCKER_IMAGE: ghcr.io/qusewen/fastapi-app
 
 jobs:
-  test:
-    name: Test with PostgreSQL & MinIO
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: testuser
-          POSTGRES_PASSWORD: testpass
-          POSTGRES_DB: testdb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      minio:
-        image: minio/minio
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-        ports:
-          - 9000:9000
-        options: >-
-          --health-cmd "curl -f http://localhost:9000/minio/health/live"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        command: server /data
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Wait for services
-        run: |
-          sleep 5
-
-      - name: Run tests (если есть)
-        env:
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: testdb
-          DB_USER: testuser
-          DB_PASSWORD: testpass
-          DB_DRIVER: postgresql+asyncpg
-          S3_ENDPOINT: http://localhost:9000
-          S3_ACCESS_KEY: minioadmin
-          S3_SECRET_KEY: minioadmin
-          S3_BUCKET: test-bucket
-          ENVIRONMENT: test
-        run: |
-          # Если есть тесты — раскомментируй
-          # pytest tests/
-          echo "Tests passed (or no tests configured)"
-
   build-and-push:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # ЭТОТ ШАГ - САМЫЙ ВАЖНЫЙ. ОН МЕНЯЕТ ДРАЙВЕР.
+      - name: Set up Docker Buildx with container driver
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -104,31 +35,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
             ${{ env.DOCKER_IMAGE }}:latest
-          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache,mode=max
-
-  # deploy-to-server:
-  #   name: Deploy to Server
-  #   runs-on: ubuntu-latest
-  #   needs: build-and-push
-  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-  #
-  #   steps:
-  #     - name: SSH and deploy
-  #       uses: appleboy/ssh-action@v1.0.3
-  #       with:
-  #         host: ${{ secrets.SERVER_HOST }}
-  #         username: ${{ secrets.SERVER_USER }}
-  #         key: ${{ secrets.SSH_PRIVATE_KEY }}
-  #         script: |
-  #           docker pull ghcr.io/${{ github.repository_owner }}/fastapi-app:latest
-  #           docker stop fastapi-app || true
-  #           docker rm fastapi-app || true
-  #           docker run -d \
-  #             --name fastapi-app \
-  #             -p 8000:8000 \
-  #             -e DB_HOST=${{ secrets.DB_HOST }} \
-  #             -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-  #             ghcr.io/${{ github.repository_owner }}/fastapi-app:latest
+            ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+          # А вот теперь, ПОСЛЕ смены драйвера, кэш НАЧНЁТ РАБОТАТЬ
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
