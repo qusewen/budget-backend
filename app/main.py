@@ -1,5 +1,6 @@
 import uvicorn
 from fastapi import Depends, FastAPI, Response, UploadFile, File
+from contextlib import asynccontextmanager
 
 from app.api.auth.login import router as login_router
 from app.api.auth.register import router
@@ -10,9 +11,18 @@ from app.api.income.income import router_income_list
 from app.api.user.user import router_user
 from app.api.wallet.walet import router_wallet
 from app.audit_middleware import AuditMiddleware
+from app.database.create.init_db import create_table
 from app.s3_service import S3Service
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Creating database tables...")
+    await create_table()
+    print("Database tables created successfully")
+    yield
+    print("Shutting down...")
+
+app = FastAPI(lifespan=lifespan)
 
 
 s3 = S3Service()
