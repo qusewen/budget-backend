@@ -15,6 +15,7 @@ async def set_cookie(
 ):
     max_age_refresh = int(timedelta(minutes=float(REFRESH_TOKEN_EXPIRE_DAYS)).total_seconds())
     max_age_access = int(timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES)).total_seconds())
+    is_production = os.getenv("ENVIRONMENT", "development") == "production"
 
     response.set_cookie(
         key="refresh_token",
@@ -23,7 +24,7 @@ async def set_cookie(
         max_age=max_age_refresh,
         expires=max_age_refresh,
         samesite="lax",
-        secure=True,
+        secure=is_production,
         path="/refresh_access_token",
     )
 
@@ -34,7 +35,7 @@ async def set_cookie(
         max_age=max_age_access,
         expires=max_age_access,
         samesite="lax",
-        secure=True,
+        secure=is_production,
         path="/",
     )
     return True

@@ -2,6 +2,8 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.Models.role.role_types import RoleTypeResponse
+
 
 class UserCreate(BaseModel):
     name: str = Field(...)
@@ -15,6 +17,31 @@ class UserResponse(BaseModel):
     email: EmailStr = Field(...)
     is_active: bool = Field(alias="isactive")
     id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CurrentUserResponse(BaseModel):
+    name: str = Field(...)
+    email: EmailStr = Field(...)
+    is_active: bool = Field(alias="isactive")
+    id: Optional[int] = None
+    content: Optional[str] = None
+    role: Optional[RoleTypeResponse] = None
+    age: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+class UpdateUser(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    is_active: Optional[bool] = None
+    id: Optional[int] = None
+    content: Optional[str] = None
+    role_id: Optional[int] = None
+    age: Optional[int] = None
 
     class Config:
         from_attributes = True

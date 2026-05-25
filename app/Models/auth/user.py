@@ -15,5 +15,5 @@ class User(Base):
     isactive: Mapped[bool] = mapped_column(default=False)
     password: Mapped[str] = mapped_column(String(255))
     role_id: Mapped[int] = mapped_column(ForeignKey('role.id'), nullable=False)
-
+    content: Mapped[str]
     role: Mapped["Role"] = relationship()

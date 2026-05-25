@@ -38,4 +38,20 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Нет активных пользователей, авторизируйтесь в приложении"
         )
+
+        # ДЛЯ ОТЛАДКИ: вывод всех данных пользователя
+    print("=== USER DATA ===")
+    print(f"User type: {type(user)}")
+
+    # Если user - это объект SQLAlchemy
+    if hasattr(user, "__dict__"):
+        # Исключаем служебные атрибуты SQLAlchemy
+        user_dict = {k: v for k, v in user.__dict__.items() if not k.startswith('_')}
+        print("User dict:", user_dict)
+
+    # Вывод конкретных атрибутов
+    print(f"User ID: {getattr(user, 'id', 'Not found')}")
+    print(f"User email: {getattr(user, 'email', 'Not found')}")
+    print(f"User username: {getattr(user, 'username', 'Not found')}")
+    print("================")
     return user

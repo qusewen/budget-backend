@@ -18,7 +18,7 @@ class BudgetList(Base):
     description: Mapped[str] = mapped_column(Text)
     type_budget: Mapped[str] = mapped_column(Text)
     content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     type_id: Mapped[Optional[int]] = mapped_column(ForeignKey("base_types.id"), nullable=True)
     currency_value: Mapped[Optional[float]] = mapped_column(Float)
     wallet_id: Mapped[int] = mapped_column(ForeignKey("wallet.id"), nullable=True)

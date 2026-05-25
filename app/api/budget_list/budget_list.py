@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Request, Query, Response, HTTPException
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, Request, Query, Response, HTTPException, UploadFile, File, Form
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +20,9 @@ from app.helpers.auth.check_role import check_is_admin_role
 from app.helpers.other.get_currency import get_currency, get_currency_one
 from app.helpers.other.meta_generator import meta_generator
 from app.helpers.update.check_fields import validate_foreign_keys
+from app.s3_service import S3Service
+
+s3 = S3Service()
 
 router_budget_list = APIRouter(prefix="/budget", tags=["Затраты 💴"], dependencies=[Depends(get_current_user)])
 
@@ -111,20 +116,28 @@ async def get_expenses(
 
 
 @router_budget_list.post("", response_model=BudgetListResponse, status_code=201, summary="Добавить новую затрату 💶")
-async def create_budget(budget: BudgetListCreate,
-                        request: Request,
-                        response: Response,
+async def create_budget(
+        request: Request,
+        response: Response,
+                        date: str = Form(...),
+                        name: str = Form(...),
+                        value: float = Form(...),
+                        currency: int = Form(...),
+                        description: str = Form(...),
+                        type_id: int = Form(...),
+                        wallet_id: int = Form(...),
+                        content: UploadFile = File(None),
                         db: AsyncSession = Depends(get_db)
                         ):
     user = await get_current_user(request, response, db)
     user_id = user.id
 
-    wallet = select(Wallet).where(Wallet.user_id == user_id, Wallet.id == budget.wallet_id).with_for_update()
+    wallet = select(Wallet).where(Wallet.user_id == user_id, Wallet.id == wallet_id).with_for_update()
     wallet_result = await db.execute(wallet)
     wallet_res = wallet_result.scalar_one_or_none()
 
 
-    types_query = select(ExpenseType).where(ExpenseType.id == budget.type_id)
+    types_query = select(ExpenseType).where(ExpenseType.id == type_id)
     types_result = await db.execute(types_query)
     types = types_result.scalar_one_or_none()
 
@@ -135,26 +148,30 @@ async def create_budget(budget: BudgetListCreate,
     if types is None:
         raise HTTPException(status_code=400, detail="Данного типа затрат не существует")
 
-    result_cur_data = await get_currency_one(db, budget.currency, wallet_res.currency_id)
-    new_budget = budget.value * result_cur_data.quotes[result_cur_data.fields]
+    result_cur_data = await get_currency_one(db, currency, wallet_res.currency_id)
+    new_budget = value * result_cur_data.quotes[result_cur_data.fields]
 
     if wallet_res.value < new_budget:
         raise HTTPException(status_code=400, detail="Недостаточно средств")
 
-    print(result_cur_data)
+    parsed_date = datetime.fromisoformat(date.replace('Z', '+00:00'))
 
+    file = content
+    object_name = None
+    if file is not None:
+        object_name = s3.upload_file(file)
 
     wallet_res.value -= new_budget
     db.add(wallet_res)
     new_budget = BudgetList(
-        name=budget.name,
-        description=budget.description,
-        date=budget.date,
-        value=budget.value,
-        currency=budget.currency,
-        content=budget.content,
+        name=name,
+        description=description,
+        date=parsed_date,
+        value=value,
+        currency=currency,
+        content=object_name,
         user_id=user_id,
-        type_id=budget.type_id,
+        type_id=type_id,
         currency_value= result_cur_data.quotes[result_cur_data.fields],
         wallet_id = wallet_res.id,
         type_budget = 'expense'
