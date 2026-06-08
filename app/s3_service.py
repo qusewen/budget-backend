@@ -24,8 +24,13 @@ class S3Service:
     def upload_file(self, file: UploadFile, object_name: str = None) -> str:
         try:
             if object_name is None:
-                ext = file.filename.split(".")[-1] if "." in file.filename else "png"
-                object_name = f"{uuid.uuid4()}.{ext}"
+                filename = file.filename or "upload"
+                # Берём только имя файла без пути и слэшей
+                filename = filename.replace("\\", "/").split("/")[-1]
+                ext = filename.split(".")[-1] if "." in filename else "png"
+                # Только безопасные символы
+                ext = ext.lower().strip()[:10]
+                object_name = f"avatars/{uuid.uuid4()}.{ext}"
 
             file_bytes = file.file.read()
 
