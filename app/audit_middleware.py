@@ -12,7 +12,11 @@ class AuditMiddleware(BaseHTTPMiddleware):
         start_time = time.time()
 
         body = None
-        if request.method in ["POST", "PUT", "PATCH"]:
+        content_type = request.headers.get("content-type", "")
+
+        is_multipart = "multipart/form-data" in content_type
+
+        if request.method in ["POST", "PUT", "PATCH"] and not is_multipart:
             body = await self._get_request_body(request)
 
         response = await call_next(request)
@@ -44,7 +48,6 @@ class AuditMiddleware(BaseHTTPMiddleware):
         return response
 
     async def _get_request_body(self, request: Request):
-
         try:
             body_bytes = await request.body()
 
